@@ -29,32 +29,23 @@ public:
     list<Arc*> get_neighbors(int vertex) const { return neighborsList[vertex]; }
 
     void setIsDirected(bool i_isDirected) { is_directed = i_isDirected; }
+    void searchBridgesVisit(Vertex* u, vector<int> GtParents, int* count);
 
     void add_arc(int from, int to);
     void checkArcValidity(int ver1, int ver2);
-    list<Vertex*> FindCircuit(Vertex* v0);
     void markOppositeDirectionArc(Vertex* neighbor_to_find, Vertex* vertex_to_update);
     bool isAllArcsMarked(Vertex* vertex, Arc** o_UnusedArcRes);
     void updateData(bool i_isDirected, int i_numOfVertices, int i_numOfArcs);
-    void checkEulilerian();
-    void findEuilerCircle();
-    bool thereIsVertexInListWithUnusedEdges(list<Vertex*>& circle, Vertex** vertex);
-    void printCircle(list<Vertex*> circle);
     void visit(Vertex* u, list<int>* endingList, Graph* tunedGraphResult);
     void MarkEdge(Vertex* from, Vertex* to, Graph* tunedGraphResult);
     void resetParentsArray();
-    bool checkEuilerianForDirectedGraph();
-    bool isStronglyConnectedGraph();
     void createTransposeGraph(Graph* transposeGraph);
-    bool isInAndOutDegreeEqual();
-    bool checkEuilerianForUndirectedGraph();
-    bool areAllDegreesEven();
     bool isConnectedGraph();
     void resetVerticesColours();
-    void FindBridges();
     list<int> runDfsAndTuneArcsByFirstMove(Graph* undirectedGraph);
     void divideDirectedGraphToRakahim(list<int> dfsEndingList, Graph* transposeGraph);
     void searchArcsThatConnectsDifferentComponents(vector<int> GtParents);
+    void FindBridges();
     ~Graph();
 };
 

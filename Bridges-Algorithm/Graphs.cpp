@@ -44,25 +44,7 @@ void Graph::checkArcValidity(int ver1, int ver2)
     }
 }
 
-// this function finds a certain circle in a graph (receives a graph that has euler circle for sure)
-list<Vertex*> Graph::FindCircuit(Vertex* v0)
-{
-    list<Vertex*> circuit;
-    Vertex* v = v0;
-    Vertex* u;
-    Arc* unusedArc;
-    circuit.push_back(v0);
-    while (!this->isAllArcsMarked(v, &unusedArc))
-    {
-        u = unusedArc->getVertex();
-        unusedArc->setIsVisited(VISITED);
-        if (!is_directed)
-            markOppositeDirectionArc(v, u);
-        circuit.push_back(u);
-        v = u;
-    }
-    return circuit;
-}
+
 
 // when the graph is not directed, mark the parallel arc
 void Graph::markOppositeDirectionArc(Vertex* neighbor_to_find, Vertex* vertex_to_update)
@@ -127,86 +109,6 @@ void Graph::updateData(bool i_isDirected, int i_numOfVertices, int i_numOfArcs)
     }
 }
 
-// checks if the graph is eulierean
-void Graph::checkEulilerian()
-{
-    bool isEulerian;
-    if (is_directed)
-        isEulerian = this->checkEuilerianForDirectedGraph();
-    else
-        isEulerian = this->checkEuilerianForUndirectedGraph();
-
-    if (isEulerian)
-    {
-        cout << "The graph is aulerian" << endl;
-        this->findEuilerCircle();
-    }
-    else
-        cout << "The graph is not aulerian" << endl;
-}
-
-// recevies a graph that has euler circle for sure and finds it, and prints the vertexes by the order he finds
-void Graph::findEuilerCircle()
-{
-    list<Vertex*> circle = this->FindCircuit(vertexes[0]);
-    Vertex* vertex;
-    Arc* unusedArc;
-
-    while (thereIsVertexInListWithUnusedEdges(circle, &vertex))
-    {
-        list<Vertex*> newCircle = FindCircuit(vertex);
-
-        auto vertexIter = circle.begin();
-
-        for (auto it = circle.begin(); it != circle.end(); ++it)
-        {
-            if (*it == vertex)
-            {
-                vertexIter = it;
-                break;
-            }
-        }
-
-        vertexIter--;
-        newCircle.pop_back();
-        if (vertexIter != circle.end())
-        {
-            circle.splice(next(vertexIter), newCircle);
-        }
-    }
-    printCircle(circle);
-}
-
-// checks for the algorithm, if the list of the circle has a vertex with unused edges
-bool Graph::thereIsVertexInListWithUnusedEdges(list<Vertex*>& circle, Vertex** vertex)
-{
-    auto arcIt = circle.begin();
-    Arc* unusedArc; // dummy
-    while (arcIt != circle.end())
-    {
-        if (!isAllArcsMarked(*arcIt, &unusedArc))
-        {
-            *vertex = *arcIt;
-            return true;
-        }
-        ++arcIt;
-    }
-    return false;
-}
-
-// prints the circle in the graph
-void Graph::printCircle(list<Vertex*> circle)
-{
-    string str_circle = "(";
-    for (auto v : circle)
-    {
-        str_circle += to_string(v->get_id()); // convert int to string
-        str_circle += ",";
-    }
-    str_circle[str_circle.length() - 1] = ')';
-
-    cout << str_circle;
-}
 
 // algorithm to go over the vertex's neighbours and marks them as visited
 void Graph::visit(Vertex* u, list<int>* endingList, Graph* tunedGraphResult)
@@ -253,31 +155,9 @@ void Graph::MarkEdge(Vertex* from, Vertex* to, Graph* tunedGraphResult)
     }
 }
 
-// checks if a directed graph is eulerian
-bool Graph::checkEuilerianForDirectedGraph()
-{
-    bool isEulerian;
-    this->resetVerticesColours();
-    if (this->isStronglyConnectedGraph() && this->isInAndOutDegreeEqual())
-        isEulerian = true;
-    else
-        isEulerian = false;
 
-    return isEulerian;
-}
 
-// checks if a directed graph is strongly connected
-bool Graph::isStronglyConnectedGraph()
-{
-    if (!this->isConnectedGraph())
-        return false;
-    else
-    {
-        Graph transposeGraph;
-        createTransposeGraph(&transposeGraph);
-        return transposeGraph.isConnectedGraph();
-    }
-}
+
 
 // create the transpose graph
 void Graph::createTransposeGraph(Graph* transposeGraph)
@@ -296,41 +176,10 @@ void Graph::createTransposeGraph(Graph* transposeGraph)
     }
 }
 
-// checks if all the in-degrees and out-degrees in the graph are equals
-bool Graph::isInAndOutDegreeEqual()
-{
-    for (int i = 0; i < num_of_vertices; i++)
-    {
-        if (vertexes[i]->get_in_degree() != vertexes[i]->get_out_degree())
-            return false;
-    }
-    return true;
-}
 
-// checks if an undirected graph is Euilerian, meaning the graph is connected, and all the degrees are even.
-bool Graph::checkEuilerianForUndirectedGraph()
-{
-    bool isEulerian;
-    this->resetVerticesColours();
-    if (this->isConnectedGraph() && this->areAllDegreesEven())
-        isEulerian = true;
-    else
-        isEulerian = false;
 
-    return isEulerian;
-}
 
-// checks if all the degrees in the graph are even
-bool Graph::areAllDegreesEven()
-{
-    for (int i = 0; i < num_of_vertices; i++)
-    {
-        if (vertexes[i]->get_degree() % 2 != 0) // checks if all the degrees are even
-            return false;
-    }
 
-    return true;
-}
 
 // checks if a not directed graph is connected
 bool Graph::isConnectedGraph()
@@ -359,6 +208,8 @@ void Graph::resetVerticesColours()
     }
 }
 
+
+//this is the main function: it finds the bridges on an undirected graph
 void Graph::FindBridges()
 {
     list<int> dfsEndingList;
@@ -374,7 +225,10 @@ void Graph::FindBridges()
         tunedGraphResult.divideDirectedGraphToRakahim(dfsEndingList, &transposeGraph);
         tunedGraphResult.searchArcsThatConnectsDifferentComponents(transposeGraph.parents);
     }
-
+    else
+    {
+        cout << "Graph is not connected";
+    }
 }
 
 void Graph::resetParentsArray()
@@ -385,6 +239,29 @@ void Graph::resetParentsArray()
     }
 }
 
+//gets undirected graph and tunes it to directed -
+// the arrow will be in the direction of the first time moved in the arc
+list<int> Graph::runDfsAndTuneArcsByFirstMove(Graph* tunedGraphResult)
+{
+    list<int> endingList;
+    Vertex* startVertex = vertexes[0];
+
+    this->resetVerticesColours();
+    tunedGraphResult->updateData(true, this->num_of_vertices, this->num_of_arcs);
+
+    for (Vertex* currentVertex : vertexes)
+    {
+        if (currentVertex->get_colour() == Colour::WHITE)
+        {
+            visit(currentVertex, &endingList, tunedGraphResult);
+        }
+    }
+
+    return endingList;
+}
+
+//gets a transpose graph and ending list, does DFS with the reversed
+//ending list as main loop. then divides the graph to rakahim (parents array)
 void Graph::divideDirectedGraphToRakahim(list<int> dfsEndingList, Graph* transposeGraph)
 {
     createTransposeGraph(transposeGraph);
@@ -405,42 +282,47 @@ void Graph::divideDirectedGraphToRakahim(list<int> dfsEndingList, Graph* transpo
     }
 }
 
-list<int> Graph::runDfsAndTuneArcsByFirstMove(Graph* tunedGraphResult)
-{
-    list<int> endingList;
-    Vertex* startVertex = vertexes[0];
-
-    this->resetVerticesColours();
-    tunedGraphResult->updateData(true, this->num_of_vertices, this->num_of_arcs);
-
-    for(Vertex* currentVertex : vertexes)
-    {
-        if (currentVertex->get_colour() == Colour::WHITE)
-        {
-            visit(currentVertex, &endingList, tunedGraphResult);
-        }
-    }
-
-    return endingList; 
-}
 
 
+//this function gets a graph and the result of division to rakahim
+//the function prints the arcs that connects different rakahim - the bridges.
 void Graph::searchArcsThatConnectsDifferentComponents(vector<int> GtParents)
 {
+    int count = 0;
+    this->resetVerticesColours();
     for (int i = 0; i < vertexes.size(); i++)
     {
-        int currentVertexID = i + 1;
-        int sourceParent = GtParents[currentVertexID - 1];
-        for (Arc* neighborArc : neighborsList[currentVertexID - 1])
+        searchBridgesVisit(vertexes[i], GtParents, &count);
+    }
+    if (count == 0)
+    {
+        cout << "No bridges in graph";
+    }
+}
+
+void Graph::searchBridgesVisit(Vertex* u, vector<int> GtParents, int* count)
+{
+    Vertex* neighborVertex;
+    int id = u->get_id();
+    int neighborId;
+    u->set_colour(Colour::GRAY);
+
+    for (Arc* neighborArc : neighborsList[id - 1])
+    {
+        neighborVertex = neighborArc->getVertex();
+        neighborId = neighborVertex->get_id();
+
+        if (neighborVertex->get_colour() == Colour::WHITE)
         {
-            int neighborID = neighborArc->getVertex()->get_id();
-            int neighborParent = GtParents[neighborID -1];
-            if (sourceParent != neighborParent)
+            if (GtParents[neighborId - 1] != GtParents[id - 1])
             {
-                cout << std::to_string(sourceParent + 1) + " " + std::to_string(neighborParent+1) << endl;
+                cout << std::to_string(id) + " " + std::to_string(neighborId) << endl;
+                (*count)++;
             }
+            searchBridgesVisit(neighborVertex, GtParents, count);
         }
     }
+    u->set_colour(Colour::BLACK);
 }
 
 

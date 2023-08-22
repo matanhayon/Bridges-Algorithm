@@ -1,7 +1,10 @@
-// this programs checks if a given graph is eulerian, and if so, pronts the euler circle in it.
-// please in put y/n if the graph is directed (y) or not (n)
-// then enter number of vertixes, and number of arcs
-// and then enter all the pairs of arcs (two vertixes)
+//Student: Matan Hayon
+//Id: 207334053
+
+
+//this program gets undirected graph,
+//it checks if the graph is connected - and if so the program
+//finds all the bridges in the graph.
 #include <iostream>
 #include <vector>
 #include <list>
@@ -26,7 +29,7 @@ void read_input_and_update_graph(Graph& graph) {
 
     cin >> numOfVertices;
     cin >> numOfArcs;
-    if (numOfVertices < 1 || numOfArcs < 1)
+    if (numOfVertices < 0 || numOfArcs < 0)
     {
         cout << "invalid input";
         exit(1);
