@@ -1,4 +1,5 @@
 #include "Graphs.h"
+#define NO_PARENT -1
 
 // constructor
 Graph::Graph()
@@ -106,11 +107,23 @@ void Graph::updateData(bool i_isDirected, int i_numOfVertices, int i_numOfArcs)
     this->neighborsList.resize(num_of_vertices);
     this->vertexes.clear();
     this->vertexes.resize(num_of_vertices);
+    this->parents.resize(num_of_vertices);
 
     for (int i = 0; i < num_of_vertices; i++)
     {
         Vertex* v = new Vertex(i + 1);
         this->vertexes[i] = v;
+        this->parents[i] = NO_PARENT;
+    }
+
+    this->arcsVisited.resize(num_of_vertices);
+    for (int i = 0; i < num_of_vertices; i++)
+    {
+        this->arcsVisited[i].resize(num_of_vertices);
+        for (int j = 0; j < num_of_vertices; j++)
+        {
+            this->arcsVisited[i][j] = false;
+        }
     }
 }
 
@@ -196,19 +209,48 @@ void Graph::printCircle(list<Vertex*> circle)
 }
 
 // algorithm to go over the vertex's neighbours and marks them as visited
-void Graph::visit(Vertex* u)
+void Graph::visit(Vertex* u, list<int>* endingList, Graph* tunedGraphResult)
 {
+    Vertex* neighborVertex;
     int id = u->get_id();
+    int neighborId;
     u->set_colour(Colour::GRAY);
-
-    for (Arc* neighbor : neighborsList[id - 1])
+    if (parents[id - 1] == NO_PARENT)
     {
-        if (neighbor->getVertex()->get_colour() == Colour::WHITE)
+        parents[id - 1] = id - 1;
+    }
+
+    for (Arc* neighborArc : neighborsList[id - 1])
+    {
+        neighborVertex = neighborArc->getVertex();
+        neighborId = neighborVertex->get_id();
+
+        if (!this->arcsVisited[id-1][neighborId-1] && !this->arcsVisited[neighborId-1][id-1])
         {
-            visit(neighbor->getVertex());
+            MarkEdge(u, neighborVertex, tunedGraphResult);
+            this->arcsVisited[id-1][neighborId-1] = true;
+            this->arcsVisited[neighborId-1][id-1] = true;
+        }
+
+        if (neighborVertex->get_colour() == Colour::WHITE)
+        {
+            parents[neighborVertex->get_id() - 1] = parents[id - 1];
+            visit(neighborVertex, endingList, tunedGraphResult);
         }
     }
     u->set_colour(Colour::BLACK);
+    if (endingList != nullptr)
+    {
+        endingList->push_back(u->get_id());
+    }
+}
+
+void Graph::MarkEdge(Vertex* from, Vertex* to, Graph* tunedGraphResult)
+{
+    if (tunedGraphResult != nullptr)
+    {
+        tunedGraphResult->add_arc(from->get_id(), to->get_id());
+    }
 }
 
 // checks if a directed graph is eulerian
@@ -232,15 +274,15 @@ bool Graph::isStronglyConnectedGraph()
     else
     {
         Graph transposeGraph;
-        createTransposeGraph(transposeGraph);
+        createTransposeGraph(&transposeGraph);
         return transposeGraph.isConnectedGraph();
     }
 }
 
 // create the transpose graph
-void Graph::createTransposeGraph(Graph& transposeGraph)
+void Graph::createTransposeGraph(Graph* transposeGraph)
 {
-    transposeGraph.updateData(true, this->num_of_vertices, this->num_of_arcs);
+    transposeGraph->updateData(this->getIsDirected(), this->num_of_vertices, this->num_of_arcs);
 
     for (int i = 0; i < this->num_of_vertices; i++)
     {
@@ -249,7 +291,7 @@ void Graph::createTransposeGraph(Graph& transposeGraph)
         for (Arc* neighbor : neighborsList[i])
         {
             int neighbor_id = neighbor->getVertex()->get_id();
-            transposeGraph.add_arc(neighbor_id, v->get_id());
+            transposeGraph->add_arc(neighbor_id, v->get_id());
         }
     }
 }
@@ -294,7 +336,7 @@ bool Graph::areAllDegreesEven()
 bool Graph::isConnectedGraph()
 {
     bool isConnected = true;
-    visit(vertexes[0]);
+    visit(vertexes[0], nullptr, nullptr);
     for (int i = 0; isConnected && i < num_of_vertices; i++)
     {
         if (vertexes[i]->get_colour() != Colour::BLACK)
@@ -310,8 +352,98 @@ void Graph::resetVerticesColours()
     for (int i = 0; i < num_of_vertices; i++)
     {
         vertexes[i]->set_colour(Colour::WHITE);
+        for (int j = 0; j < num_of_vertices; j++)
+        {
+            this->arcsVisited[i][j] = false;
+        }
     }
 }
+
+void Graph::FindBridges()
+{
+    list<int> dfsEndingList;
+    Graph tunedGraphResult;
+    Graph transposeGraph;
+    
+    if (this->isConnectedGraph())
+    {
+        this->resetVerticesColours();
+        this->resetParentsArray();
+        tunedGraphResult.setIsDirected(true);
+        dfsEndingList = runDfsAndTuneArcsByFirstMove(&tunedGraphResult);
+        tunedGraphResult.divideDirectedGraphToRakahim(dfsEndingList, &transposeGraph);
+        tunedGraphResult.searchArcsThatConnectsDifferentComponents(transposeGraph.parents);
+    }
+
+}
+
+void Graph::resetParentsArray()
+{
+    for (int i = 0; i < num_of_vertices; i++)
+    {
+        parents[i] = NO_PARENT;
+    }
+}
+
+void Graph::divideDirectedGraphToRakahim(list<int> dfsEndingList, Graph* transposeGraph)
+{
+    createTransposeGraph(transposeGraph);
+    transposeGraph->resetVerticesColours();
+    this->resetVerticesColours();
+    
+    list<int> reversedEndingList = dfsEndingList;
+    reversedEndingList.reverse();
+
+    for (list<int>::iterator it = reversedEndingList.begin(); it != reversedEndingList.end(); ++it)
+    {
+        int currentIndex = *it;
+        Vertex* currentVertex = transposeGraph->vertexes[currentIndex - 1];
+        if (currentVertex->get_colour() == Colour::WHITE)
+        {
+            transposeGraph->visit(currentVertex, nullptr, nullptr);
+        }
+    }
+}
+
+list<int> Graph::runDfsAndTuneArcsByFirstMove(Graph* tunedGraphResult)
+{
+    list<int> endingList;
+    Vertex* startVertex = vertexes[0];
+
+    this->resetVerticesColours();
+    tunedGraphResult->updateData(true, this->num_of_vertices, this->num_of_arcs);
+
+    for(Vertex* currentVertex : vertexes)
+    {
+        if (currentVertex->get_colour() == Colour::WHITE)
+        {
+            visit(currentVertex, &endingList, tunedGraphResult);
+        }
+    }
+
+    return endingList; 
+}
+
+
+void Graph::searchArcsThatConnectsDifferentComponents(vector<int> GtParents)
+{
+    for (int i = 0; i < vertexes.size(); i++)
+    {
+        int currentVertexID = i + 1;
+        int sourceParent = GtParents[currentVertexID - 1];
+        for (Arc* neighborArc : neighborsList[currentVertexID - 1])
+        {
+            int neighborID = neighborArc->getVertex()->get_id();
+            int neighborParent = GtParents[neighborID -1];
+            if (sourceParent != neighborParent)
+            {
+                cout << std::to_string(sourceParent + 1) + " " + std::to_string(neighborParent+1) << endl;
+            }
+        }
+    }
+}
+
+
 
 // destructor
 Graph::~Graph()

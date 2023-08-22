@@ -1,5 +1,5 @@
-#ifndef arc
-#define arc
+#ifndef arc_h
+#define arc_h
 #define NOTVISITED false
 #define VISITED true
 
@@ -28,6 +28,8 @@ public:
     {
         return isVisited;
     }
+
+
 
     void setVertex(Vertex* i_vertex)
     {
